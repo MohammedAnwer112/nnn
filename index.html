@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PySpace — Python Workbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Fira+Code:wght@400;500;600&family=Share+Tech+Mono&family=VT323&family=Space+Grotesk:wght@400;500;700&family=Orbitron:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+--bg:#0b0e14;--bg-alt:#11151f;--panel:#131826;--border:#232a3b;--text:#e7ecf5;--text-dim:#7c88a5;--accent:#5eead4;--accent-2:#f472b6;--font-ui:'Space Grotesk',sans-serif;--font-edit:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-ui);transition:background .5s ease,color .5s ease;overflow:hidden;}
+.app{display:flex;height:100vh;width:100vw;}
+.sidebar{width:230px;flex-shrink:0;background:var(--bg-alt);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:18px 14px;gap:8px;}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.brand-dot{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent);}
+.brand-name{font-weight:700;font-size:17px;letter-spacing:.5px;}
+.sb-label{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);margin:14px 0 4px;}
+.sb-btn{display:flex;align-items:center;gap:10px;background:transparent;border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px;cursor:pointer;font-family:var(--font-ui);font-size:13.5px;text-align:left;transition:.2s;}
+.sb-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(255,255,255,.03);}
+.sb-icon{font-size:15px;width:18px;text-align:center;}
+.sidebar-foot{margin-top:auto;font-size:11px;color:var(--text-dim);border-top:1px solid var(--border);padding-top:10px;}
+.workspace{flex:1;display:flex;flex-direction:column;min-width:0;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--panel);}
+.filename{font-family:var(--font-edit);font-size:14px;color:var(--text-dim);}
+.topbar-actions{display:flex;gap:10px;align-items:center;}
+.btn{border:none;border-radius:8px;padding:9px 16px;font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;transition:.2s;}
+.btn-run{background:var(--accent);color:#04120f;}
+.btn-run:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
+.btn-ghost:hover{border-color:var(--accent-2);color:var(--accent-2);}
+.tabs{display:flex;gap:2px;background:var(--bg-alt);padding:0 20px;border-bottom:1px solid var(--border);}
+.tab{padding:11px 18px;font-size:13px;font-weight:600;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;font-family:var(--font-ui);}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-panels{flex:1;position:relative;overflow:hidden;}
+.panel{position:absolute;inset:0;display:none;}
+.panel.active{display:flex;}
+#panel-editor{background:var(--bg);}
+.editor-wrap{display:flex;flex:1;width:100%;overflow:auto;}
+.linenos{user-select:none;text-align:right;padding:16px 10px;background:var(--bg-alt);color:var(--text-dim);font-family:var(--font-edit);font-size:14px;line-height:1.55;border-right:1px solid var(--border);min-width:44px;}
+#code{flex:1;resize:none;border:none;outline:none;background:transparent;color:var(--text);font-family:var(--font-edit);font-size:14px;line-height:1.55;padding:16px 18px;white-space:pre;overflow:auto;tab-size:4;}
+#panel-gui{flex-direction:column;align-items:center;justify-content:center;background:repeating-linear-gradient(45deg,var(--bg) 0 12px,var(--bg-alt) 12px 24px);gap:10px;padding:20px;}
+#gui-output{max-width:92%;max-height:88%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);display:none;background:#fff;}
+#gui-placeholder{color:var(--text-dim);font-family:var(--font-edit);font-size:13.5px;text-align:center;max-width:420px;}
+#panel-terminal{flex-direction:column;background:#05070c;}
+.term-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;border-bottom:1px solid var(--border);}
+.term-bar span{font-size:12px;color:var(--text-dim);font-family:var(--font-edit);}
+#terminal-output{flex:1;margin:0;padding:16px 18px;overflow:auto;font-family:var(--font-edit);font-size:13.5px;line-height:1.6;color:#c9d6ee;white-space:pre-wrap;word-break:break-word;}
+.term-ok{color:var(--accent);}
+.term-err{color:#fb7185;}
+.overlay{position:fixed;inset:0;background:rgba(3,5,10,.72);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:50;}
+.overlay.hidden{display:none;}
+.market-panel{width:720px;max-width:92vw;max-height:82vh;background:var(--panel);border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;}
+.market-head{padding:18px 20px 10px;border-bottom:1px solid var(--border);}
+.market-head h2{margin:0 0 10px;font-size:18px;}
+#market-search{width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size:13.5px;outline:none;}
+#market-search:focus{border-color:var(--accent);}
+#market-list{overflow:auto;padding:12px 20px 20px;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.pkg-card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--bg-alt);}
+.pkg-name{font-family:var(--font-edit);font-weight:700;color:var(--accent);font-size:13.5px;}
+.pkg-desc{font-size:12px;color:var(--text-dim);margin:4px 0 10px;line-height:1.4;min-height:32px;}
+.pkg-actions{display:flex;gap:6px;}
+.pkg-btn{flex:1;font-size:11px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;font-family:var(--font-ui);}
+.pkg-btn:hover{border-color:var(--accent-2);color:var(--accent-2);}
+.market-close{position:absolute;top:14px;right:14px;}
+.credit{position:fixed;bottom:8px;right:14px;font-size:11px;color:var(--text-dim);font-family:var(--font-ui);letter-spacing:.4px;z-index:5;}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--accent);color:var(--text);padding:9px 18px;border-radius:8px;font-size:13px;font-family:var(--font-ui);opacity:0;pointer-events:none;transition:.3s;z-index:60;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+<div class="brand"><div class="brand-dot"></div><div class="brand-name">PySpace</div></div>
+<div class="sb-label">File</div>
+<button class="sb-btn" id="btn-new"><span class="sb-icon">＋</span>New File</button>
+<button class="sb-btn" id="btn-import"><span class="sb-icon">⇪</span>Import .py</button>
+<button class="sb-btn" id="btn-save"><span class="sb-icon">⇩</span>Save / Export</button>
+<div class="sb-label">Packages</div>
+<button class="sb-btn" id="btn-market"><span class="sb-icon">⌘</span>Module Market</button>
+<div class="sb-label">Appearance</div>
+<button class="sb-btn" id="btn-theme"><span class="sb-icon">◐</span>Shuffle Theme</button>
+<div class="sidebar-foot">Runtime: Pyodide (CPython in WASM)<br>Status: <span id="rt-status">idle</span></div>
+</aside>
+<main class="workspace">
+<div class="topbar">
+<div class="filename" id="filename-label">main.py</div>
+<div class="topbar-actions">
+<button class="btn btn-ghost" id="btn-clear-term">Clear Terminal</button>
+<button class="btn btn-run" id="btn-run">▶ Run</button>
+</div>
+</div>
+<div class="tabs">
+<div class="tab active" data-tab="editor">Main Writing</div>
+<div class="tab" data-tab="gui">GUI Output</div>
+<div class="tab" data-tab="terminal">Terminal Output</div>
+</div>
+<div class="tab-panels">
+<section id="panel-editor" class="panel active">
+<div class="editor-wrap">
+<div class="linenos" id="linenos">1</div>
+<textarea id="code" spellcheck="false">print("Hello from PySpace")
+
+for i in range(5):
+    print("count:", i)
+</textarea>
+</div>
+</section>
+<section id="panel-gui" class="panel">
+<img id="gui-output" alt="gui output">
+<div id="gui-placeholder">No GUI output yet.<br>Generate a matplotlib figure in your code (e.g. plt.plot(...); it will render here automatically after Run.</div>
+</section>
+<section id="panel-terminal" class="panel">
+<div class="term-bar"><span>python3 · pyodide</span><span id="term-time"></span></div>
+<pre id="terminal-output">Ready. Click Run to execute your code.</pre>
+</section>
+</div>
+</main>
+<div class="overlay hidden" id="market-overlay">
+<div class="market-panel">
+<div class="market-head" style="position:relative;">
+<h2>Module Market</h2>
+<input id="market-search" placeholder="Search any Python module or library...">
+<button class="btn btn-ghost market-close" id="btn-market-close">✕</button>
+</div>
+<div id="market-list"></div>
+</div>
+</div>
+</div>
+<footer class="credit">Made by Mohammed Anwer</footer>
+<input type="file" id="file-input" accept=".py,.txt" hidden>
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+const THEMES=[
+{name:"Terminal Green",bg:"#04140c",bgAlt:"#06180f",panel:"#08221a",border:"#134a35",text:"#d7ffe9",dim:"#4f9a76",accent:"#39ff9a",accent2:"#a8ff60",fontUi:"'Share Tech Mono',monospace",fontEdit:"'Fira Code',monospace"},
+{name:"Synthwave Sunset",bg:"#180a24",bgAlt:"#1f0e30",panel:"#26123c",border:"#4a1f66",text:"#fbe9ff",dim:"#a385c2",accent:"#f472b6",accent2:"#66f0ff",fontUi:"'Orbitron',sans-serif",fontEdit:"'JetBrains Mono',monospace"},
+{name:"Solarized Dusk",bg:"#062b30",bgAlt:"#093840",panel:"#0c4249",border:"#155e66",text:"#e5f4f2",dim:"#6fa3a0",accent:"#5eead4",accent2:"#f4a259",fontUi:"'Space Grotesk',sans-serif",fontEdit:"'JetBrains Mono',monospace"},
+{name:"Amber CRT",bg:"#0c0800",bgAlt:"#141000",panel:"#1c1600",border:"#4a3a00",text:"#ffdf8c",dim:"#9c7c1f",accent:"#ffb000",accent2:"#ff6a00",fontUi:"'VT323',monospace",fontEdit:"'VT323',monospace"},
+{name:"Midnight Ocean",bg:"#050b1a",bgAlt:"#081025",panel:"#0c1631",border:"#1c2c55",text:"#e3eaff",dim:"#7488bf",accent:"#4fc3f7",accent2:"#82f7c5",fontUi:"'IBM Plex Sans',sans-serif",fontEdit:"'Fira Code',monospace"},
+{name:"Nordic Frost",bg:"#0e1420",bgAlt:"#141c2c",panel:"#1a2436",border:"#2c3a52",text:"#e8edf5",dim:"#8592ab",accent:"#88c0d0",accent2:"#b48ead",fontUi:"'IBM Plex Sans',sans-serif",fontEdit:"'JetBrains Mono',monospace"},
+{name:"Volcanic",bg:"#160505",bgAlt:"#1e0808",panel:"#280b0b",border:"#5a1a1a",text:"#ffe6df",dim:"#b17b6f",accent:"#ff5a3c",accent2:"#ffc857",fontUi:"'Space Grotesk',sans-serif",fontEdit:"'Courier Prime',monospace"},
+{name:"Forest Terminal",bg:"#0a140d",bgAlt:"#0f1c12",panel:"#142718",border:"#2a4a32",text:"#e4f7e6",dim:"#7fa985",accent:"#8bd450",accent2:"#ffd166",fontUi:"'Space Grotesk',sans-serif",fontEdit:"'Share Tech Mono',monospace"}
+];
+function applyTheme(t){
+const r=document.documentElement.style;
+r.setProperty('--bg',t.bg);r.setProperty('--bg-alt',t.bgAlt);r.setProperty('--panel',t.panel);r.setProperty('--border',t.border);r.setProperty('--text',t.text);r.setProperty('--text-dim',t.dim);r.setProperty('--accent',t.accent);r.setProperty('--accent-2',t.accent2);r.setProperty('--font-ui',t.fontUi);r.setProperty('--font-edit',t.fontEdit);
+toast("Theme: "+t.name);
+}
+applyTheme(THEMES[Math.floor(Math.random()*THEMES.length)]);
+document.getElementById('btn-theme').addEventListener('click',()=>{applyTheme(THEMES[Math.floor(Math.random()*THEMES.length)]);});
+
+const tabs=document.querySelectorAll('.tab');
+const panels={editor:document.getElementById('panel-editor'),gui:document.getElementById('panel-gui'),terminal:document.getElementById('panel-terminal')};
+tabs.forEach(tb=>tb.addEventListener('click',()=>{
+tabs.forEach(x=>x.classList.remove('active'));
+tb.classList.add('active');
+Object.values(panels).forEach(p=>p.classList.remove('active'));
+panels[tb.dataset.tab].classList.add('active');
+}));
+function showTab(name){
+tabs.forEach(x=>x.classList.toggle('active',x.dataset.tab===name));
+Object.entries(panels).forEach(([k,p])=>p.classList.toggle('active',k===name));
+}
+
+const codeEl=document.getElementById('code');
+const linenos=document.getElementById('linenos');
+function refreshLineNumbers(){
+const lines=codeEl.value.split('\n').length;
+let out='';
+for(let i=1;i<=lines;i++){out+=i+'\n';}
+linenos.textContent=out;
+}
+codeEl.addEventListener('input',refreshLineNumbers);
+codeEl.addEventListener('scroll',()=>{linenos.scrollTop=codeEl.scrollTop;});
+codeEl.addEventListener('keydown',(e)=>{
+if(e.key==='Tab'){
+e.preventDefault();
+const s=codeEl.selectionStart,en=codeEl.selectionEnd;
+codeEl.value=codeEl.value.substring(0,s)+'    '+codeEl.value.substring(en);
+codeEl.selectionStart=codeEl.selectionEnd=s+4;
+}
+});
+refreshLineNumbers();
+
+let toastTimer=null;
+function toast(msg){
+const t=document.getElementById('toast');
+t.textContent=msg;
+t.classList.add('show');
+clearTimeout(toastTimer);
+toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+document.getElementById('btn-new').addEventListener('click',()=>{
+if(confirm('Start a new file? Unsaved changes will be lost.')){
+codeEl.value='';
+refreshLineNumbers();
+document.getElementById('filename-label').textContent='untitled.py';
+}
+});
+
+const fileInput=document.getElementById('file-input');
+document.getElementById('btn-import').addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',()=>{
+const f=fileInput.files[0];
+if(!f)return;
+const reader=new FileReader();
+reader.onload=()=>{
+codeEl.value=reader.result;
+refreshLineNumbers();
+document.getElementById('filename-label').textContent=f.name;
+toast('Imported '+f.name);
+};
+reader.readAsText(f);
+fileInput.value='';
+});
+
+document.getElementById('btn-save').addEventListener('click',()=>{
+const name=document.getElementById('filename-label').textContent||'main.py';
+const blob=new Blob([codeEl.value],{type:'text/x-python'});
+const a=document.createElement('a');
+a.href=URL.createObjectURL(blob);
+a.download=name.endsWith('.py')?name:name+'.py';
+document.body.appendChild(a);
+a.click();
+a.remove();
+toast('Saved '+a.download);
+});
+
+const termOut=document.getElementById('terminal-output');
+function termWrite(msg,cls){
+const span=document.createElement('span');
+if(cls)span.className=cls;
+span.textContent=msg;
+termOut.appendChild(span);
+termOut.scrollTop=termOut.scrollHeight;
+}
+document.getElementById('btn-clear-term').addEventListener('click',()=>{termOut.textContent='';});
+
+let pyodideReady=null;
+async function getPyodide(){
+if(!pyodideReady){
+document.getElementById('rt-status').textContent='loading...';
+pyodideReady=loadPyodide();
+pyodideReady.then(async(py)=>{
+document.getElementById('rt-status').textContent='ready';
+await py.loadPackage('micropip');
+});
+}
+return pyodideReady;
+}
+
+async function runCode(){
+const runBtn=document.getElementById('btn-run');
+runBtn.disabled=true;
+runBtn.textContent='Running...';
+termOut.textContent='';
+showTab('terminal');
+document.getElementById('term-time').textContent=new Date().toLocaleTimeString();
+try{
+const py=await getPyodide();
+py.setStdout({batched:(s)=>termWrite(s+'\n')});
+py.setStderr({batched:(s)=>termWrite(s+'\n','term-err')});
+document.getElementById('gui-output').style.display='none';
+document.getElementById('gui-placeholder').style.display='block';
+try{
+await py.runPythonAsync("import matplotlib\nmatplotlib.use('AGG')\n");
+}catch(e){}
+await py.runPythonAsync(codeEl.value);
+try{
+const hasFig=await py.runPythonAsync("\nimport io,base64\ntry:\n    import matplotlib.pyplot as plt\n    ok = len(plt.get_fignums())>0\nexcept Exception:\n    ok = False\nok\n");
+if(hasFig){
+const b64=await py.runPythonAsync("\nimport io,base64\nimport matplotlib.pyplot as plt\nbuf=io.BytesIO()\nplt.savefig(buf,format='png',facecolor='white')\nbuf.seek(0)\nbase64.b64encode(buf.read()).decode('utf-8')\n");
+const img=document.getElementById('gui-output');
+img.src='data:image/png;base64,'+b64;
+img.style.display='block';
+document.getElementById('gui-placeholder').style.display='none';
+}
+}catch(e){}
+termWrite('\n[process exited normally]','term-ok');
+}catch(err){
+termWrite(String(err),'term-err');
+}
+runBtn.disabled=false;
+runBtn.textContent='▶ Run';
+}
+document.getElementById('btn-run').addEventListener('click',runCode);
+
+const PACKAGES=[
+{n:"numpy",d:"N-dimensional array computing and linear algebra"},
+{n:"pandas",d:"Dataframes and tabular data analysis"},
+{n:"matplotlib",d:"2D plotting and data visualization"},
+{n:"scipy",d:"Scientific computing algorithms"},
+{n:"scikit-learn",d:"Classical machine learning toolkit"},
+{n:"requests",d:"HTTP requests made simple"},
+{n:"flask",d:"Lightweight web application framework"},
+{n:"django",d:"Full-featured web framework"},
+{n:"fastapi",d:"Modern async API framework"},
+{n:"beautifulsoup4",d:"HTML and XML parsing for scraping"},
+{n:"pillow",d:"Image processing library"},
+{n:"opencv-python",d:"Computer vision toolkit"},
+{n:"tensorflow",d:"Deep learning framework"},
+{n:"torch",d:"PyTorch deep learning framework"},
+{n:"keras",d:"High level neural network API"},
+{n:"seaborn",d:"Statistical data visualization"},
+{n:"plotly",d:"Interactive charts and dashboards"},
+{n:"sqlalchemy",d:"SQL toolkit and ORM"},
+{n:"pytest",d:"Testing framework"},
+{n:"unittest2",d:"Backport of unittest features"},
+{n:"click",d:"Command line interface creation"},
+{n:"typer",d:"CLI apps based on type hints"},
+{n:"pydantic",d:"Data validation using type hints"},
+{n:"aiohttp",d:"Async HTTP client and server"},
+{n:"asyncio",d:"Asynchronous I/O standard library"},
+{n:"celery",d:"Distributed task queue"},
+{n:"redis",d:"Redis client for Python"},
+{n:"pymongo",d:"MongoDB driver"},
+{n:"psycopg2",d:"PostgreSQL adapter"},
+{n:"boto3",d:"AWS SDK for Python"},
+{n:"paramiko",d:"SSH2 protocol implementation"},
+{n:"cryptography",d:"Cryptographic recipes and primitives"},
+{n:"pyjwt",d:"JSON Web Token implementation"},
+{n:"selenium",d:"Browser automation and testing"},
+{n:"scrapy",d:"Web crawling framework"},
+{n:"lxml",d:"Fast XML and HTML processing"},
+{n:"openpyxl",d:"Read and write Excel files"},
+{n:"xlrd",d:"Excel file reading"},
+{n:"pyyaml",d:"YAML parser and emitter"},
+{n:"toml",d:"TOML file parsing"},
+{n:"jinja2",d:"Templating engine"},
+{n:"markdown",d:"Markdown to HTML converter"},
+{n:"pygments",d:"Syntax highlighting library"},
+{n:"black",d:"Uncompromising code formatter"},
+{n:"flake8",d:"Style guide enforcement"},
+{n:"mypy",d:"Static type checker"},
+{n:"pylint",d:"Code analysis tool"},
+{n:"tqdm",d:"Progress bars for loops"},
+{n:"rich",d:"Beautiful terminal formatting"},
+{n:"colorama",d:"Cross platform colored terminal text"},
+{n:"pygame",d:"Game development library"},
+{n:"kivy",d:"Cross platform GUI framework"},
+{n:"pyqt5",d:"Qt bindings for desktop GUIs"},
+{n:"tkinter",d:"Standard GUI toolkit"},
+{n:"wxpython",d:"Native desktop GUI toolkit"},
+{n:"turtle",d:"Simple vector graphics for teaching"},
+{n:"networkx",d:"Graph and network analysis"},
+{n:"sympy",d:"Symbolic mathematics"},
+{n:"statsmodels",d:"Statistical modeling and testing"},
+{n:"xgboost",d:"Gradient boosting library"},
+{n:"lightgbm",d:"Fast gradient boosting framework"},
+{n:"nltk",d:"Natural language toolkit"},
+{n:"spacy",d:"Industrial strength NLP"},
+{n:"gensim",d:"Topic modeling and word vectors"},
+{n:"transformers",d:"State of the art NLP models"},
+{n:"datasets",d:"ML dataset loading utilities"},
+{n:"gym",d:"Reinforcement learning environments"},
+{n:"pyaudio",d:"Audio I/O bindings"},
+{n:"sounddevice",d:"Play and record audio"},
+{n:"moviepy",d:"Video editing library"},
+{n:"pydub",d:"Audio manipulation made easy"},
+{n:"reportlab",d:"PDF generation"},
+{n:"pypdf",d:"PDF reading and manipulation"},
+{n:"fpdf2",d:"Simple PDF document generator"},
+{n:"docx",d:"Word document generation"},
+{n:"xlsxwriter",d:"Excel file writing with formatting"},
+{n:"faker",d:"Generate fake data for testing"},
+{n:"factory-boy",d:"Test fixture replacement"},
+{n:"hypothesis",d:"Property based testing"},
+{n:"tornado",d:"Async networking framework"},
+{n:"bottle",d:"Micro web framework"},
+{n:"falcon",d:"Minimalist API framework"},
+{n:"gunicorn",d:"WSGI HTTP server"},
+{n:"uvicorn",d:"ASGI server implementation"},
+{n:"websockets",d:"WebSocket client and server"},
+{n:"socketio",d:"Realtime bidirectional event based communication"},
+{n:"paho-mqtt",d:"MQTT client for IoT messaging"},
+{n:"pyserial",d:"Serial port communication"},
+{n:"RPi.GPIO",d:"Raspberry Pi GPIO control"},
+{n:"pyautogui",d:"GUI automation and screen control"},
+{n:"keyboard",d:"Global keyboard hooks"},
+{n:"pynput",d:"Mouse and keyboard control"},
+{n:"schedule",d:"Job scheduling in pure Python"},
+{n:"apscheduler",d:"Advanced Python scheduler"},
+{n:"arrow",d:"Better dates and times"},
+{n:"pendulum",d:"Datetime handling made easy"},
+{n:"python-dateutil",d:"Powerful date extensions"},
+{n:"pytz",d:"Timezone definitions"},
+{n:"regex",d:"Advanced regular expressions"},
+{n:"unidecode",d:"Unicode to ASCII transliteration"},
+{n:"emoji",d:"Emoji handling in text"},
+{n:"validators",d:"Simple data validation"},
+{n:"marshmallow",d:"Object serialization and validation"},
+{n:"attrs",d:"Classes without boilerplate"},
+{n:"dataclasses-json",d:"JSON encoding for dataclasses"},
+{n:"orjson",d:"Fast JSON serialization"},
+{n:"ujson",d:"Ultra fast JSON encoder"},
+{n:"msgpack",d:"Efficient binary serialization"},
+{n:"protobuf",d:"Protocol buffers serialization"},
+{n:"grpcio",d:"gRPC framework"},
+{n:"graphene",d:"GraphQL framework"},
+{n:"strawberry-graphql",d:"Modern GraphQL library"},
+{n:"httpx",d:"Next generation HTTP client"},
+{n:"urllib3",d:"HTTP client library"},
+{n:"certifi",d:"Root certificate bundle"},
+{n:"cffi",d:"Foreign function interface"},
+{n:"numba",d:"JIT compiler for numerical code"},
+{n:"cython",d:"C extensions for Python"},
+{n:"dask",d:"Parallel computing at scale"},
+{n:"ray",d:"Distributed computing framework"},
+{n:"joblib",d:"Lightweight pipelining and caching"},
+{n:"multiprocess",d:"Enhanced multiprocessing support"},
+{n:"pyinstaller",d:"Bundle apps into executables"},
+{n:"cx-freeze",d:"Freeze scripts into executables"},
+{n:"setuptools",d:"Package building and distribution"},
+{n:"wheel",d:"Built package format"},
+{n:"twine",d:"Publish packages to PyPI"},
+{n:"virtualenv",d:"Isolated Python environments"},
+{n:"poetry",d:"Dependency management and packaging"},
+{n:"pipenv",d:"Combines pip and virtualenv"}
+];
+
+const marketList=document.getElementById('market-list');
+function renderMarket(filter){
+const f=(filter||'').toLowerCase();
+marketList.innerHTML='';
+PACKAGES.filter(p=>p.n.toLowerCase().includes(f)||p.d.toLowerCase().includes(f)).forEach(p=>{
+const card=document.createElement('div');
+card.className='pkg-card';
+card.innerHTML='<div class="pkg-name">'+p.n+'</div><div class="pkg-desc">'+p.d+'</div><div class="pkg-actions"></div>';
+const actions=card.querySelector('.pkg-actions');
+const copyBtn=document.createElement('button');
+copyBtn.className='pkg-btn';
+copyBtn.textContent='Copy pip install';
+copyBtn.addEventListener('click',()=>{
+navigator.clipboard.writeText('pip install '+p.n).then(()=>toast('Copied: pip install '+p.n));
+});
+const loadBtn=document.createElement('button');
+loadBtn.className='pkg-btn';
+loadBtn.textContent='Load into session';
+loadBtn.addEventListener('click',async()=>{
+loadBtn.textContent='Loading...';
+try{
+const py=await getPyodide();
+py.setStdout({batched:(s)=>termWrite(s+'\n')});
+py.setStderr({batched:(s)=>termWrite(s+'\n','term-err')});
+const micropip=py.pyimport('micropip');
+await micropip.install(p.n);
+termWrite('Loaded package: '+p.n+'\n','term-ok');
+toast(p.n+' loaded into session');
+}catch(e){
+termWrite('Could not load '+p.n+': '+String(e)+'\n','term-err');
+toast('Failed to load '+p.n);
+}
+loadBtn.textContent='Load into session';
+});
+actions.appendChild(copyBtn);
+actions.appendChild(loadBtn);
+marketList.appendChild(card);
+});
+}
+document.getElementById('btn-market').addEventListener('click',()=>{
+document.getElementById('market-overlay').classList.remove('hidden');
+renderMarket('');
+document.getElementById('market-search').focus();
+});
+document.getElementById('btn-market-close').addEventListener('click',()=>{
+document.getElementById('market-overlay').classList.add('hidden');
+});
+document.getElementById('market-search').addEventListener('input',(e)=>{
+renderMarket(e.target.value);
+});
+</script>
+</body>
+</html>
